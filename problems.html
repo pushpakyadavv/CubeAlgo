@@ -12,12 +12,10 @@
     <nav class="navbar glass">
         <div class="nav-container">
             <div class="nav-brand">
-                <div class="nav-logo">C</div>
-<div class="nav-brand">
-            <img src="assets/logo.jpeg" alt="CubeAlgo" class="nav-logo-img">
-            <span>CubeAlgo</span>
-        </div>
-            
+                <img src="assets/logo.jpeg" alt="CubeAlgo" class="nav-logo-img">
+                <span>CubeAlgo</span>
+            </div>
+
             <div class="nav-menu" id="navMenu">
                 <a href="home.html" class="nav-link">
                     <i class="fas fa-home"></i>
@@ -27,7 +25,7 @@
                     <i class="fas fa-code"></i>
                     <span>Problems</span>
                 </a>
-                <a href="#" class="nav-link" id="leaderboardLink">
+                <a href="leaderboard.html" class="nav-link">
                     <i class="fas fa-trophy"></i>
                     <span>Leaderboard</span>
                 </a>
@@ -121,37 +119,31 @@
     <script src="js/utils.js"></script>
     <script src="js/problems.js"></script>
     <script>
-        // DOM ready - no variable redeclaration
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await checkSession();
             if (!session) {
                 window.location.href = 'index.html';
                 return;
             }
-
             await loadProblems();
         });
 
-        // Filter buttons - use the global variables from problems.js
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
-                // These are defined in problems.js
                 window.currentFilter = this.dataset.filter;
                 window.currentPage = 1;
                 loadProblems();
             });
         });
 
-        // Search - use debounced function
         document.getElementById('searchInput').addEventListener('input', function() {
             window.currentSearch = this.value.toLowerCase();
             window.currentPage = 1;
             loadProblems();
         });
 
-        // Pagination
         document.getElementById('prevPage').addEventListener('click', () => {
             if (window.currentPage > 1) {
                 window.currentPage--;
@@ -164,7 +156,6 @@
             loadProblems();
         });
 
-        // Logout
         document.getElementById('logoutBtn').addEventListener('click', async () => {
             await logout();
             showToast('Logged out successfully', 'info');
@@ -173,13 +164,11 @@
             }, 500);
         });
 
-        // Mobile menu toggle
         document.getElementById('mobileMenuBtn').addEventListener('click', () => {
             const menu = document.getElementById('navMenu');
             menu.classList.toggle('active');
         });
 
-        // Theme toggle
         document.getElementById('themeToggle').addEventListener('click', toggleTheme);
         loadTheme();
     </script>
