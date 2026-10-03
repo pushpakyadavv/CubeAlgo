@@ -12,10 +12,10 @@
     <nav class="navbar glass">
         <div class="nav-container">
             <div class="nav-brand">
-                <div class="nav-logo">C</div>
+                <img src="assets/logo.jpeg" alt="CubeAlgo" class="nav-logo-img">
                 <span>CubeAlgo</span>
             </div>
-            
+
             <div class="nav-menu" id="navMenu">
                 <a href="home.html" class="nav-link">
                     <i class="fas fa-home"></i>
@@ -25,7 +25,7 @@
                     <i class="fas fa-code"></i>
                     <span>Problems</span>
                 </a>
-                <a href="#" class="nav-link" id="leaderboardLink">
+                <a href="leaderboard.html" class="nav-link">
                     <i class="fas fa-trophy"></i>
                     <span>Leaderboard</span>
                 </a>
@@ -53,8 +53,9 @@
         <div class="profile-container">
             <div class="profile-header glass">
                 <div class="profile-avatar">
-                    <img src="assets/default-avatar.png" alt="Profile Avatar" id="profileAvatar">
-                    <button class="edit-avatar-btn" id="editAvatarBtn">
+                    <img src="assets/default-avatar.png" alt="Profile Avatar" id="profileAvatar"
+                         onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%236366f1%22/><text x=%2250%22 y=%2265%22 font-size=%2250%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22>C</text></svg>'">
+                    <button class="edit-avatar-btn" id="editAvatarBtn" type="button">
                         <i class="fas fa-camera"></i>
                     </button>
                     <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
@@ -68,36 +69,28 @@
 
             <div class="profile-stats glass">
                 <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-trophy"></i>
-                    </div>
+                    <div class="stat-icon"><i class="fas fa-trophy"></i></div>
                     <div class="stat-info">
                         <h3>Score</h3>
                         <p class="stat-value" id="profileScore">0</p>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
                     <div class="stat-info">
                         <h3>Solved</h3>
                         <p class="stat-value" id="profileSolved">0</p>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-star"></i>
-                    </div>
+                    <div class="stat-icon"><i class="fas fa-star"></i></div>
                     <div class="stat-info">
                         <h3>Rank</h3>
                         <p class="stat-value" id="profileRank">-</p>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-paper-plane"></i>
-                    </div>
+                    <div class="stat-icon"><i class="fas fa-paper-plane"></i></div>
                     <div class="stat-info">
                         <h3>Submissions</h3>
                         <p class="stat-value" id="profileSubmissions">0</p>
@@ -172,9 +165,14 @@
                 return;
             }
 
-            await loadProfile();
-            await loadStats();
-            await loadAchievements();
+            try {
+                if (typeof loadProfile === 'function') await loadProfile();
+                if (typeof loadStats === 'function') await loadStats();
+                if (typeof loadAchievements === 'function') await loadAchievements();
+            } catch (e) {
+                console.error('Profile load error:', e);
+                showToast('Error loading profile data', 'error');
+            }
         });
 
         document.getElementById('logoutBtn').addEventListener('click', async () => {
@@ -186,27 +184,48 @@
         });
 
         document.getElementById('mobileMenuBtn').addEventListener('click', () => {
-            const menu = document.getElementById('navMenu');
-            menu.classList.toggle('active');
+            document.getElementById('navMenu').classList.toggle('active');
         });
 
         document.getElementById('themeToggle').addEventListener('click', toggleTheme);
         loadTheme();
 
-        document.getElementById('editAvatarBtn').addEventListener('click', () => {
-            document.getElementById('avatarUpload').click();
+        // FIXED: avatar upload with label-based trigger fallback
+        const editAvatarBtn = document.getElementById('editAvatarBtn');
+        const avatarUpload = document.getElementById('avatarUpload');
+
+        editAvatarBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            avatarUpload.click();
         });
 
-        document.getElementById('avatarUpload').addEventListener('change', async function(e) {
+        avatarUpload.addEventListener('change', async function(e) {
             const file = e.target.files[0];
-            if (file) {
+            if (!file) return;
+
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('Image must be under 2MB', 'error');
+                this.value = '';
+                return;
+            }
+
+            // Optimistic preview
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                document.getElementById('profileAvatar').src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+
+            try {
                 const result = await uploadAvatar(file);
-                if (result.success) {
+                if (result && result.success) {
                     document.getElementById('profileAvatar').src = result.url;
                     showToast('Avatar updated successfully!', 'success');
                 } else {
-                    showToast(result.error, 'error');
+                    showToast(result?.error || 'Upload failed', 'error');
                 }
+            } catch (err) {
+                showToast('Upload error: ' + err.message, 'error');
             }
         });
     </script>
