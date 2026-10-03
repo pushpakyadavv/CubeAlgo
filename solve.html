@@ -12,10 +12,10 @@
     <nav class="navbar glass">
         <div class="nav-container">
             <div class="nav-brand">
-                <div class="nav-logo">C</div>
+                <img src="assets/logo.jpeg" alt="CubeAlgo" class="nav-logo-img">
                 <span>CubeAlgo</span>
             </div>
-            
+
             <div class="nav-menu" id="navMenu">
                 <a href="home.html" class="nav-link">
                     <i class="fas fa-home"></i>
@@ -25,7 +25,7 @@
                     <i class="fas fa-code"></i>
                     <span>Problems</span>
                 </a>
-                <a href="#" class="nav-link" id="leaderboardLink">
+                <a href="leaderboard.html" class="nav-link">
                     <i class="fas fa-trophy"></i>
                     <span>Leaderboard</span>
                 </a>
@@ -143,13 +143,12 @@
     <script src="js/auth.js"></script>
     <script src="js/theme.js"></script>
     <script src="js/utils.js"></script>
-    
-    <!-- ALL SOLVE LOGIC - Self-contained -->
+
     <script>
-        console.log('🚀 solve.html loaded - Standalone mode');
-        
+        console.log('🚀 solve.html loaded');
+
         // ============================================
-        // HARDCODED PROBLEMS (Fallback if Supabase fails)
+        // FALLBACK PROBLEMS
         // ============================================
         const FALLBACK_PROBLEMS = {
             1: {
@@ -185,30 +184,28 @@
         };
 
         // ============================================
-        // GET PROBLEM - Try Supabase first, then fallback
+        // GET PROBLEM
         // ============================================
         async function getProblem(problemId) {
             console.log('📥 Getting problem:', problemId);
-            
+
             try {
-                // Try Supabase first
                 const { data, error } = await supabaseClient
                     .from('problems')
                     .select('*')
                     .eq('id', parseInt(problemId))
                     .single();
-                
+
                 if (error) {
                     console.warn('⚠️ Supabase error, using fallback:', error.message);
                     return FALLBACK_PROBLEMS[problemId] || null;
                 }
-                
+
                 if (data) {
                     console.log('✅ Problem from Supabase:', data);
                     return data;
                 }
-                
-                console.warn('⚠️ Problem not in Supabase, using fallback');
+
                 return FALLBACK_PROBLEMS[problemId] || null;
             } catch (e) {
                 console.warn('⚠️ Supabase failed, using fallback:', e.message);
@@ -217,44 +214,40 @@
         }
 
         // ============================================
-        // UPDATE UI
+        // DISPLAY PROBLEM
         // ============================================
         function displayProblem(problem) {
             if (!problem) {
                 document.getElementById('problemTitle').textContent = '❌ Problem Not Found';
-                document.getElementById('problemDescription').innerHTML = 
+                document.getElementById('problemDescription').innerHTML =
                     '<p style="color: var(--danger);">Problem could not be loaded.</p>';
                 return;
             }
 
             console.log('📝 Displaying problem:', problem.title);
-            
-            // Header
+
             document.getElementById('problemTitle').textContent = problem.title;
-            document.getElementById('problemDifficulty').textContent = 
+            document.getElementById('problemDifficulty').textContent =
                 problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1);
-            document.getElementById('problemDifficulty').className = 
+            document.getElementById('problemDifficulty').className =
                 `difficulty-badge ${problem.difficulty}`;
             document.getElementById('problemScore').textContent = `+${problem.score || 10}`;
-            
-            // Description
+
             if (problem.description) {
-                document.getElementById('problemDescription').innerHTML = 
+                document.getElementById('problemDescription').innerHTML =
                     `<p>${problem.description.replace(/\n/g, '<br>')}</p>`;
             }
-            
-            // Constraints
+
             if (problem.constraints) {
                 const constraints = problem.constraints.split('\n').filter(c => c.trim());
-                document.getElementById('problemConstraints').innerHTML = 
+                document.getElementById('problemConstraints').innerHTML =
                     `<ul>${constraints.map(c => `<li>${c.trim()}</li>`).join('')}</ul>`;
             }
-            
-            // Examples
+
             if (problem.examples) {
                 try {
                     const examples = JSON.parse(problem.examples);
-                    document.getElementById('problemExamples').innerHTML = 
+                    document.getElementById('problemExamples').innerHTML =
                         examples.map((ex, i) => `
                             <div class="example-box">
                                 <div class="example-label">Example ${i + 1}:</div>
@@ -262,49 +255,57 @@
                             </div>
                         `).join('');
                 } catch {
-                    document.getElementById('problemExamples').innerHTML = 
+                    document.getElementById('problemExamples').innerHTML =
                         `<div class="example-box"><pre>${problem.examples}</pre></div>`;
                 }
             }
         }
 
         // ============================================
-        // RUN CODE (Mock execution for demo)
+        // RUN CODE (Piston API v2)
         // ============================================
         async function runCode(code, language) {
             const outputContent = document.getElementById('outputContent');
             const runBtn = document.getElementById('runBtn');
-            
+
             if (!code || code.trim() === '') {
                 showToast('Please write some code first', 'error');
                 return;
             }
-            
+
             runBtn.disabled = true;
             runBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
             outputContent.textContent = '⏳ Running...';
             outputContent.className = 'output-content';
-            
+
+            // Map language names to Piston-compatible names
+            const languageMap = {
+                javascript: 'javascript',
+                python: 'python',
+                c: 'c',
+                cpp: 'c++',
+                java: 'java'
+            };
+
             try {
-                // Try Piston API
-                const response = await fetch('https://emkc.org/api/v1/piston/execute', {
+                const response = await fetch('https://emkc.org/api/v2/piston/execute', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        language: language,
+                        language: languageMap[language] || language,
                         version: '*',
                         files: [{ name: 'solution', content: code }]
                     })
                 });
-                
+
                 if (response.ok) {
                     const result = await response.json();
-                    outputContent.textContent = result.run?.output || 'No output';
+                    const output = result.run?.output || result.compile?.output || 'No output';
+                    outputContent.textContent = output;
                     outputContent.className = 'output-content success';
                     showToast('Code executed!', 'success');
                 } else {
-                    // Mock output
-                    outputContent.textContent = `⚠️ API unavailable\n\nMock output for:\n${code.substring(0, 100)}...`;
+                    outputContent.textContent = `⚠️ API unavailable (Status: ${response.status})\n\nMock output for:\n${code.substring(0, 100)}...`;
                     outputContent.className = 'output-content';
                     showToast('Using mock output', 'info');
                 }
@@ -323,46 +324,45 @@
         async function submitSolution(code, language) {
             const outputContent = document.getElementById('outputContent');
             const submitBtn = document.getElementById('submitBtn');
-            
+
             if (!code || code.trim() === '') {
                 showToast('Please write some code', 'error');
                 return;
             }
-            
+
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
             outputContent.textContent = '⏳ Submitting...';
             outputContent.className = 'output-content';
-            
+
             try {
                 const user = await getCurrentUser();
                 if (!user) {
                     showToast('Please login first', 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-check"></i> Submit';
                     return;
                 }
-                
-                // Simple validation
+
                 if (!code.includes('solution')) {
                     outputContent.textContent = '❌ Your code must contain a "solution" function.';
                     outputContent.className = 'output-content error';
                     showToast('Missing solution function', 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-check"></i> Submit';
                     return;
                 }
-                
-                // Save submission (if Supabase available)
+
                 const problemId = parseInt(new URLSearchParams(window.location.search).get('id')) || 1;
-                await saveSubmission(user.id, problemId, language, code, 'accepted', 10);
-                
+
+                if (typeof saveSubmission === 'function') {
+                    await saveSubmission(user.id, problemId, language, code, 'accepted', 10);
+                } else {
+                    console.warn('saveSubmission not defined, skipping DB save');
+                }
+
                 outputContent.textContent = `✅ Accepted!\nScore: +10 points\n\nGreat job!`;
                 outputContent.className = 'output-content success';
                 showToast('Accepted! +10 points', 'success');
-                
+
                 const badge = document.getElementById('problemDifficulty');
-                badge.textContent = `${document.getElementById('problemDifficulty').textContent} ✅ Solved`;
+                badge.textContent = `${badge.textContent.replace(' ✅ Solved', '')} ✅ Solved`;
                 badge.style.borderColor = 'var(--success)';
             } catch (e) {
                 outputContent.textContent = `❌ Error: ${e.message}`;
@@ -374,6 +374,11 @@
             }
         }
 
+        // ============================================
+        // RESET CODE
+        // ============================================
+        let originalCode = '';
+
         function resetCode() {
             if (originalCode) {
                 if (confirm('Reset code to original?')) {
@@ -384,22 +389,18 @@
         }
 
         // ============================================
-        // MAIN INITIALIZATION
+        // INITIALIZATION
         // ============================================
-        let originalCode = '';
-        
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🚀 Initializing solve page');
-            
+
             try {
-                // Check authentication
                 const session = await checkSession();
                 if (!session) {
                     window.location.href = 'index.html';
                     return;
                 }
 
-                // Get problem ID
                 const urlParams = new URLSearchParams(window.location.search);
                 const problemId = urlParams.get('id');
                 console.log('📥 Problem ID:', problemId);
@@ -410,15 +411,12 @@
                     return;
                 }
 
-                // Load problem
                 const problem = await getProblem(problemId);
                 console.log('📥 Problem loaded:', problem);
-                
+
                 if (problem) {
                     displayProblem(problem);
-                    
-                    // Set initial code
-                    const language = document.getElementById('languageSelect').value;
+
                     originalCode = `// ${problem.title}\n// Difficulty: ${problem.difficulty}\n\nfunction solution(${problem.params || 'nums, target'}) {\n    // Write your solution here\n    \n}\n\nconsole.log(solution([2, 7, 11, 15], 9));`;
                     document.getElementById('codeEditor').value = originalCode;
                     showToast('Problem loaded!', 'success');
