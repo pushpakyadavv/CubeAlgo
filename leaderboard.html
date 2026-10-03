@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CubeAlgo - Leaderboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar glass">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="assets/logo.jpeg" alt="CubeAlgo" class="nav-logo-img">
+                <span>CubeAlgo</span>
+            </div>
+
+            <div class="nav-menu" id="navMenu">
+                <a href="home.html" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="problems.html" class="nav-link">
+                    <i class="fas fa-code"></i>
+                    <span>Problems</span>
+                </a>
+                <a href="leaderboard.html" class="nav-link active">
+                    <i class="fas fa-trophy"></i>
+                    <span>Leaderboard</span>
+                </a>
+                <a href="profile.html" class="nav-link">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+            </div>
+
+            <div class="nav-actions">
+                <button class="theme-toggle" id="themeToggle" title="Toggle Theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="logout-btn" id="logoutBtn" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="problems-container">
+            <div class="problems-header">
+                <h1>🏆 Leaderboard</h1>
+                <p>Top coders ranked by score</p>
+            </div>
+
+            <div class="problems-table-container glass">
+                <table class="problems-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>User</th>
+                            <th>Solved</th>
+                            <th>Score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardBody">
+                        <tr>
+                            <td colspan="4" style="text-align:center; padding: 2rem;">
+                                <i class="fas fa-spinner fa-spin"></i> Loading leaderboard...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const session = await checkSession();
+            if (!session) {
+                window.location.href = 'index.html';
+                return;
+            }
+            await loadLeaderboard();
+        });
+
+        async function loadLeaderboard() {
+            const tbody = document.getElementById('leaderboardBody');
+            try {
+                const { data, error } = await supabaseClient
+                    .from('profiles')
+                    .select('username, total_score, solved_count')
+                    .order('total_score', { ascending: false })
+                    .limit(50);
+
+                if (error || !data || data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:2rem;">No data yet. Be the first!</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = data.map((user, i) => `
+                    <tr>
+                        <td><strong>#${i + 1}</strong></td>
+                        <td>${user.username || 'Anonymous'}</td>
+                        <td>${user.solved_count || 0}</td>
+                        <td>${user.total_score || 0}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:2rem; color: var(--danger);">Failed to load: ${e.message}</td></tr>`;
+            }
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await logout();
+            window.location.href = 'index.html';
+        });
+
+        document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+            document.getElementById('navMenu').classList.toggle('active');
+        });
+
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        loadTheme();
+    </script>
+</body>
+</html>
