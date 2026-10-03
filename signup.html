@@ -12,8 +12,8 @@
     <div class="auth-container">
         <div class="auth-card glass">
             <div class="auth-header">
-                <div class="logo-container">
-                    <div class="auth-logo">C</div>
+                <div class="auth-brand">
+                    <img src="assets/logo.jpeg" alt="CubeAlgo" class="auth-logo">
                     <h1>CubeAlgo</h1>
                 </div>
                 <p class="auth-subtitle">Create your coding journey</p>
@@ -65,12 +65,13 @@
                 <div class="form-group">
                     <label for="avatar">
                         <i class="fas fa-image"></i>
-                        Profile Picture
+                        Profile Picture (optional)
                     </label>
                     <div class="avatar-upload">
                         <input type="file" id="avatar" accept="image/*">
                         <div class="avatar-preview" id="avatarPreview">
-                            <img src="assets/default-avatar.png" alt="Avatar Preview">
+                            <img src="assets/default-avatar.png" alt="Avatar Preview"
+                                 onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%236366f1%22/><text x=%2250%22 y=%2265%22 font-size=%2250%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22>C</text></svg>'">
                         </div>
                     </div>
                 </div>
@@ -97,6 +98,11 @@
         document.getElementById('avatar').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                    showToast('Image must be under 2MB', 'error');
+                    this.value = '';
+                    return;
+                }
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     document.querySelector('#avatarPreview img').src = event.target.result;
@@ -107,12 +113,17 @@
 
         document.getElementById('signupForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const email = document.getElementById('signupEmail').value;
+
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
             const password = document.getElementById('signupPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             const avatarFile = document.getElementById('avatar').files[0];
+
+            if (username.length < 3) {
+                showToast('Username must be at least 3 characters', 'error');
+                return;
+            }
 
             if (password !== confirmPassword) {
                 showToast('Passwords do not match', 'error');
@@ -124,15 +135,26 @@
                 return;
             }
 
-            const result = await signup(username, email, password, avatarFile);
-            
-            if (result.success) {
-                showToast('Account created successfully!', 'success');
-                setTimeout(() => {
-                    window.location.href = 'home.html';
-                }, 1500);
-            } else {
-                showToast(result.error, 'error');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+
+            try {
+                const result = await signup(username, email, password, avatarFile);
+
+                if (result.success) {
+                    showToast('Account created successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'home.html';
+                    }, 1500);
+                } else {
+                    showToast(result.error || 'Signup failed', 'error');
+                }
+            } catch (err) {
+                showToast('Unexpected error: ' + err.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
             }
         });
 
